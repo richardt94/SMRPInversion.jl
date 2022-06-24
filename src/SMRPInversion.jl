@@ -1,6 +1,6 @@
 # wrapper to integrate SMRPI 1D forward model with
 # HiQGA/transD_GP
-module SMRPI
+module SMRPInversion
 using HiQGA.transD_GP.AbstractOperator, HiQGA.transD_GP.CommonToAll
 import HiQGA.transD_GP.AbstractOperator.get_misfit
 import HiQGA.transD_GP.Model, HiQGA.transD_GP.Options
