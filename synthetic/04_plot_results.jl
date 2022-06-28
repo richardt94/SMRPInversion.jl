@@ -20,9 +20,9 @@ linearsat || ax[1].step(istothepow ? w : log10.(w), zboundaries, "w-")
 linearsat && ax[1].step(w, zboundaries, "w-")
 ## amplitude swarm plots
 if sounding.amponly
-    SMRPI.plot_model_field(sounding, opt, decfactor=10, lcolor="k", modelalpha=0.08)
+    SMRPInversion.plot_model_field(sounding, opt, decfactor=10, lcolor="k", modelalpha=0.08)
 else    
-    SMRPI.plot_model_field(sounding, opt, optn, decfactor=10, lcolor="k", modelalpha=0.08)
+    SMRPInversion.plot_model_field(sounding, opt, optn, decfactor=10, lcolor="k", modelalpha=0.08)
 end  
 ## noise estimates
 if noise_mle

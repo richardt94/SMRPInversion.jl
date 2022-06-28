@@ -1,13 +1,14 @@
-using transD_GP, PyPlot, MAT, DelimitedFiles, Revise
+using HiQGA, PyPlot, MAT, DelimitedFiles, Revise
 cd(@__DIR__)
-includet("../SMRPI.jl")
-includet("../ProcessingTools.jl")
+# includet("../SMRPI.jl")
+using SMRPInversion
+# includet("../ProcessingTools.jl")
 ## Load the processed data from a GMR FID sounding
 example_fid = matread("/g/data/z67/rlt118/SNMR_data/OK18_38/FID_80ms_noemi.mat")
 t = example_fid["time_fid"][:]
 fid_qt = example_fid["coil_1_fid"]
 ##
-V0, ϕ = ProcessingTools.get_sounding_curve(t, fid_qt)
+V0, ϕ = SMRPInversion.get_sounding_curve(t, fid_qt)
 ## params for the sounding - some of these are stored in the MATLAB file
 # but others (e.g. field inclination) are from site info for the survey
 # or separate ASCII files

@@ -234,7 +234,7 @@ function plotmodelcurve(w, z, V0, ϕ, q, fig; iaxis=1, gridalpha=0.5, modelalpha
                     lcolor=lcolor, writelabel=writelabel)
 end
 
-function plotcurve(V0, ϕ, q, gridalpha=0.5)
+function plotcurve(V0, ϕ, q; gridalpha=0.5)
     # sometimes you only want to plot the responses, as in for a paper
     fig, ax = plt.subplots(1, 2, sharex=true)
     plotcurve(V0, ϕ, q, fig, gridalpha=gridalpha)
