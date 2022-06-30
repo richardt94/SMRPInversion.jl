@@ -1,6 +1,6 @@
 using HiQGA.transD_GP, PyPlot, Revise
 cd(@__DIR__)
-includet("../SMRPI.jl")
+using SMRPInversion
 ##
 L = sqrt(π*50^2/4)
 log_zgrid = 0.5:0.05:2
@@ -21,10 +21,10 @@ w = 0.01 * ones(length(zboundaries))
 w[(zboundaries .> 30) .& (zboundaries .< 45)] .= 0.4
 ##
 linearsat = true
-amponly = false
+amponly = true
 mult = false
 noise_mle = false
-sounding = SMRPI.create_synthetic(w, σ, t, Be, ϕ, 50., zboundaries, qgrid, noise_mle=noise_mle, amponly=amponly,
+sounding = SMRPInversion.create_synthetic(w, σ, t, Be, ϕ, 50., zboundaries, qgrid, noise_mle=noise_mle, amponly=amponly,
                 noise_frac=0.05, mult=mult, linearsat=linearsat)
 ##
 transD_GP.get_misfit(w, sounding)
