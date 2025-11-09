@@ -1,7 +1,7 @@
 name = "SMRPInversion"
 uuid = "aec56ffe-cd48-4f37-83c0-3fddfef137dd"
 authors = ["Richard Taylor <29562583+richardt94@users.noreply.github.com>"]
-version = "0.1.1"
+version = "0.1.2"
 
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
