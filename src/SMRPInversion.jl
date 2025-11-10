@@ -198,7 +198,7 @@ function plotmodelcurve(c, t, w, z, V0, ϕ, q, fig; gridalpha=0.5, modelalpha=0.
     isempty(t) && push!(zfromt, maximum(z))
     ax[1].step([c;c[end]], zfromt)
     if writelabel
-        ax[1].grid(b=true, which="both", alpha=gridalpha)
+        ax[1].grid(true, which="both", alpha=gridalpha)
         ax[1].set_xlabel("conductivity S/m")
         ax[1].set_ylim(reverse(extrema(z)))
     end
@@ -225,7 +225,7 @@ function plotmodelcurve(w, z, V0, ϕ, q, fig; iaxis=1, gridalpha=0.5, modelalpha
         ax[iaxis].step(w, z, color=lcolor, alpha=modelalpha)
     end    
     if writelabel
-        ax[iaxis].grid(b=true, which="both", alpha=gridalpha)
+        ax[iaxis].grid(true, which="both", alpha=gridalpha)
         ax[iaxis].set_xlabel("saturation")
         ax[iaxis].set_ylabel("depth m")
         ax[iaxis].set_ylim(reverse(extrema(z)))
@@ -264,10 +264,10 @@ function writelabels(ax, iaxis, gridalpha)
     ax[iaxis].set_xlabel("Pulse moment A-s")
     ax[iaxis].set_ylabel("Amplitude")
     ax[iaxis].set_xscale("log")
-    ax[iaxis].grid(b=true, which="both", alpha=gridalpha)
+    ax[iaxis].grid(true, which="both", alpha=gridalpha)
     ax[iaxis+1].set_xlabel("Pulse moment A-s")
     ax[iaxis+1].set_ylabel("phase")
-    ax[iaxis+1].grid(b=true, which="both", alpha=gridalpha)
+    ax[iaxis+1].grid(true, which="both", alpha=gridalpha)
 end  
 
 function plot_model_field(S::SMRSounding, opt::Options, optn::OptionsNuisance; 
