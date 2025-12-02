@@ -7,11 +7,7 @@ addprocs(nchains)
 @everywhere using Distributed, HiQGA.transD_GP, SMRPInversion
 ## run McMC
 @time begin
-    if sounding.amponly
-        transD_GP.main(opt, sounding, Tmax=Tmax, nsamples=nsamples, nchains=nchains, nchainsatone=nchainsatone)
-    else    
-        transD_GP.main(opt, optn, sounding, Tmax=Tmax, nsamples=nsamples, nchains=nchains, nchainsatone=nchainsatone)
-    end
+        transD_GP.main(opt, sounding; Tmax, nsamples, nchains, nchainsatone)
 end        
 ## close the worker pool
 rmprocs(workers())

@@ -26,4 +26,5 @@ noise_mle = false # maximum likelihood estimate for noise
 sounding = SMRPInversion.create_synthetic(w, σ, t, Be, ϕ, L, zboundaries, qgrid; noise_mle, amponly,
                 noise_frac=0.05, mult, linearsat)
 ##
-@info "@info χ² is $(2*transD_GP.get_misfit(w, sounding))"
+chifac = amponly ? 1 : 2
+@info "@info χ² is $(chifac*transD_GP.get_misfit(w, sounding))"

@@ -26,9 +26,9 @@ extendfrac, dz = 1.028, 1.
 zall, znall, zboundaries = transD_GP.setupz(zstart, extendfrac, dz=dz, n=70, showplot=true)
 ##
 linearsat = true
-amponly = true
+amponly = false
 mult = false
-phaserev = false
+phaserev = true
 ##
 phaserev && (ϕ=-ϕ)
 F = SMRPInversion.MRSForward_square(L, zboundaries, q[:], inclination, θ, Be, σt)

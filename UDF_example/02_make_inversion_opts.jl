@@ -1,6 +1,6 @@
 ## make options for the stationary GP
 fileprefix = "SMR_example_"*(linearsat ? "linearsat_" : "logsat_")*
-                            (amponly ? "amponly_" : "")*
+                            (amponly ? "amponly_" : "phase_")*
                             (mult ? "multnoise_" : "")
 K = transD_GP.GP.OrstUhn()
 nmin, nmax = 2, 40 # max number of basis functions 
