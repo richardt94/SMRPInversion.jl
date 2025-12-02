@@ -15,6 +15,7 @@ export γh, ConductivityModel, MRSForward, MRSForward_square
 export newSMRSounding, create_synthetic
 
 include("ProcessingTools.jl")
+using .ProcessingTools
 
 abstract type SMRSounding <: Operator1D end
 
@@ -43,7 +44,7 @@ mutable struct SMRSoundingUnknown <: SMRSounding
     stretch_ϕ :: Real
 end
 
-function newSMRSounding(V0, ϕ, Fm; σ_V0=nothing, σ_ϕ=nothing, mult=false, linearsat=false, amponly=false, showplot=false,
+function newSMRSounding(V0, ϕ, Fm; σ_V0=nothing, σ_ϕ=nothing, mult=false, linearsat=true, amponly=true, showplot=false,
                         offset_ϕ = 0., stretch_ϕ=1.)
     (length(V0) != length(ϕ) && 
         throw(ArgumentError("V0 and ϕ must have same length")))
