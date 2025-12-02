@@ -13,8 +13,6 @@ xall = permutedims(collect(1:1.0:length(zboundaries))) # depths modelled at in n
 xbounds = permutedims([extrema(xall)...]) # depth bounds in number of layers
 λ, δ = [2], (linearsat ? fbounds[1]/10 : 1e-3) # correlation length, and nugget in saturation
 ## Initialize a stationary GP using these options
-using Random
-Random.seed!(12)
 opt = transD_GP.OptionsStat(nmin = nmin,
                         nmax = nmax,
                         xbounds = xbounds,

@@ -8,7 +8,6 @@ transD_GP.plot_posterior(sounding, opt, burninfrac=0.5, qp1=0.05, qp2=0.95, nbin
     vmaxpc=1.0, pdfnormalize=false, plotmean=false, lwidth=1)
 ax = gcf().axes
 ax[1].set_xlabel("fractional water content")
-ax[1].step(zboundaries, "w-")
 ## amplitude swarm plots
 if sounding.amponly
     SMRPInversion.plot_model_field(sounding, opt, decfactor=10, lcolor="k", modelalpha=0.08)
