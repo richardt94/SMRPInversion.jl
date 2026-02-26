@@ -196,8 +196,14 @@ function plotmodelcurve(c, t, w, z, V0, ϕ, q, fig; gridalpha=0.5, modelalpha=0.
     # conductivity and saturation into axis
     ax = fig.axes
     zfromt = [0.; cumsum(t)]
-    isempty(t) && push!(zfromt, maximum(z))
-    ax[1].step([c;c[end]], zfromt)
+    if isempty(t) 
+        push!(zfromt, maximum(z))
+        cuse = [c;c[end]]
+    else
+        cuse = c
+    end
+    ax[1].step(cuse, zfromt)
+    ax[1].set_xscale("log")
     if writelabel
         ax[1].grid(true, which="both", alpha=gridalpha)
         ax[1].set_xlabel("conductivity S/m")
