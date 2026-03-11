@@ -23,11 +23,11 @@ V0 = V0[:,1+ntrunc:end]
 L = 50
 inclination = 44.2 * π/180 #degrees to radians
 θ = 0 #loop oriented mag. north
-Be = 2π*freq/SMRPI.γh
+Be = 2π*freq/SMRPInversion.γh
 resist_data = readdlm("/g/data/z67/rlt118/SNMR_data/OK18_38/OK18_38_res_profile.txt")
 c = 1 ./ resist_data[2:end,1]
 thick = Vector{Float64}(resist_data[2:end-1,2])
-σt = SMRPI.ConductivityModel(c,thick)
+σt = SMRPInversion.ConductivityModel(c,thick)
 ## define a depth grid for the modelling and inversion
 zstart = 1.
 extendfrac, dz = 1.028, 1
@@ -40,6 +40,6 @@ mult = false
 phaserev = false
 ##
 phaserev && (ϕ=-ϕ)
-F = SMRPI.MRSForward_square(L, zboundaries, q[:], inclination, 0, Be, σt)
-sounding = SMRPI.newSMRSounding(V0[:], ϕ[:], F, linearsat=linearsat, amponly=amponly, mult=mult, showplot=true)
+F = SMRPInversion.MRSForward_square(L, zboundaries, q[:], inclination, 0, Be, σt)
+sounding = SMRPInversion.newSMRSounding(V0[:], ϕ[:], F, linearsat=linearsat, amponly=amponly, mult=mult, showplot=true)
 ##

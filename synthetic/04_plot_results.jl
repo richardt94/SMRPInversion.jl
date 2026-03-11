@@ -4,7 +4,7 @@ close("all")
 transD_GP.getchi2forall(opt)
 if !noise_mle
     ax = gcf().axes;
-    χ² = chifac*length(sounding.V0)
+    χ² = length(sounding.V0)
     ax[2].plot(xlim(), [χ², χ²], "--", color="gray")
 end
 ##
