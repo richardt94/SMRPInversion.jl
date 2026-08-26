@@ -413,5 +413,9 @@ function loopacrosssoundings(
     end
 end
 
+# ── Deterministic (Occam-style Gauss-Newton) inversion ──────────────────────
+# Amplitude-only Occam wrapper around HiQGA.transD_GP.gradientinv.
+# Defined here so SMRSoundingKnown (from earlier in this file) is in scope.
+include("DeterministicInversion.jl")
 
 end
