@@ -110,6 +110,49 @@ function transD_GP.AbstractOperator.getresidual(op::SMRDetOperator, w::Vector{Fl
 end
 
 """
+    makereg(r::Symbol, F::SMRDetOperator) -> SparseMatrixCSC
+
+Depth-scaled smoothness operator for `SMRDetOperator`, dispatched over
+HiQGA's generic `makereg`.
+
+The base HiQGA `makereg` builds a bare first-difference matrix `Rw =
+vcat(0, diff(w))`. On the log-growing depth grid produced by
+`transD_GP.setupz(1.0, 1.028; ...)` cells at 100 m are ~15 m thick vs
+~1 m at the top, so an unweighted difference penalty over-regularises
+the shallow model and under-regularises the deep model. Replaces the
+row `i ≥ 2` entries with `±1/√dz[i-1]`, giving `‖Rw‖² ≈ ∫(∂w/∂z)² dz`
+— the Constable-Parker-Constable (1987) discretisation-consistent form.
+
+Row 1 is `1/√dz[1]` on the diagonal, anchoring the top cell against
+zero at the same 1/√dz scale as the differences. The base `:R1` leaves
+row 1 all zeros, so with `β² = 0` (the default) the top cell drifts
+freely — problematic for SMR where dead-time truncation makes the top
+few metres the least-constrained. For a tight anchor to a non-zero
+reference model, set `β² > 0` in `deterministic_invert` and provide a
+plausible `wref[1]`.
+"""
+function transD_GP.makereg(r::Symbol, F::SMRDetOperator)
+    dz = F.S.Fm.dz
+    nz = size(F.K̃, 2)
+    length(dz) == nz - 1 || error("dz length ($(length(dz))) must be nz-1 ($(nz-1))")
+    r === :R0 && return sparse(1.0I, nz, nz)
+    if r === :R1
+        rows = Int[1]; cols = Int[1]; vals = Float64[1.0 / sqrt(dz[1])]
+        @inbounds for i in 2:nz
+            s = 1.0 / sqrt(dz[i-1])
+            push!(rows, i); push!(cols, i-1); push!(vals, -s)
+            push!(rows, i); push!(cols, i);   push!(vals,  s)
+        end
+        return sparse(rows, cols, vals, nz, nz)
+    end
+    if r === :R2
+        R1 = transD_GP.makereg(:R1, F)
+        return R1 * R1
+    end
+    error("unknown regularization: $r")
+end
+
+"""
     deterministic_invert(S::SMRSoundingKnown; wstart, wref, kwargs...)
         -> (op, mnew, χ², λ², oidx)
 
@@ -124,12 +167,23 @@ Arguments:
 - `wstart` : starting water-content vector, one entry per boundary in
              `S.Fm.zgrid`. Default `0.05` everywhere.
 - `wref`   : reference model used only when `β² > 0`. Default `0.05`.
-- `lo`, `hi` : per-cell bounds on water content. Default `[1e-4, 0.5]`.
-- `regtype` : `:R0` (smallest), `:R1` (flattest / first-difference), or
-              `:R2` (smoothest / curvature). Default `:R1`.
+- `lo`, `hi` : per-cell bounds on water content. Default `[1e-4, 0.4]`.
+              `hi = 0.4` reflects a plausible upper bound on porosity for
+              most sands/silts; tighten further for site-specific priors.
+- `regtype` : `:R0` (smallest), `:R1` (first-difference), or `:R2`
+              (curvature). `:R1` and `:R2` are dispatched through a
+              depth-scaled `makereg` local to this module — see the
+              method docstring for `makereg(::Symbol, ::SMRDetOperator)`.
+              Default `:R1`.
 - `λ²min`, `λ²max` : log10 bounds on the smoothness-weight line search.
                       Default `[-1, 6]`.
 - `β²`     : reference-model penalty weight. Default `0` (wref inactive).
+             Set `> 0` if you need a tight anchor of the top cell to
+             `wref[1]` — the scaled R matrix only weakly anchors it to
+             zero on its own.
+- `knownvalue` : Gauss-Newton acceptance threshold — a step is accepted
+                 if it drops χ² to at most `knownvalue · χ²₀`. Inherited
+                 from HiQGA's `gradientinv`. Default `0.7`.
 - `nstepsmax` : maximum outer iterations. Default `15`.
 - `ntries` : line-search resolution on `λ²`. Default `6`.
 - `target` : χ² target. Default `length(S.V0)` (χ²/N = 1).
@@ -147,11 +201,12 @@ See also: `linearised_posterior_covariance`.
 function deterministic_invert(S::SMRSoundingKnown;
         wstart = fill(0.05, length(S.Fm.zgrid)),
         wref   = fill(0.05, length(S.Fm.zgrid)),
-        lo = 1e-4, hi = 0.5,
+        lo = 1e-4, hi = 0.4,
         regtype = :R1,
         λ²min = -1.0,
         λ²max = 6.0,
         β²    = 0.0,
+        knownvalue = 0.7,
         nstepsmax = 15,
         ntries    = 6,
         target    = nothing,
@@ -161,7 +216,7 @@ function deterministic_invert(S::SMRSoundingKnown;
     length(wref)   == length(wstart) || throw(ArgumentError("wref length must equal wstart length"))
     result = transD_GP.gradientinv(
         collect(Float64, wstart), collect(Float64, wref), op;
-        regtype, λ²min, λ²max, β², nstepsmax, ntries, target, lo, hi, kwargs...)
+        regtype, λ²min, λ²max, β², knownvalue, nstepsmax, ntries, target, lo, hi, kwargs...)
     return (op, result...)
 end
 

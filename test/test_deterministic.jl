@@ -8,7 +8,7 @@
 #      the χ² = n_data target within reasonable tolerance and recovering
 #      the aquifer bump in the right depth range.
 
-using Test, LinearAlgebra, Statistics
+using Test, LinearAlgebra, SparseArrays, Statistics
 using SMRPInversion, SNMRForward
 using HiQGA: transD_GP
 
@@ -81,6 +81,35 @@ sounding, w_true, zbnd = synthetic_sounding()
 end
 
 # ────────────────────────────────────────────────────────────────────────────
+@testset "depth-scaled makereg for SMRDetOperator" begin
+    op = SMRPInversion.SMRDetOperator(sounding)
+    dz = op.S.Fm.dz
+    nz = size(op.K̃, 2)
+
+    R0 = transD_GP.makereg(:R0, op)
+    @test size(R0) == (nz, nz)
+    @test R0 == sparse(1.0I, nz, nz)
+
+    R1 = transD_GP.makereg(:R1, op)
+    @test size(R1) == (nz, nz)
+
+    # Top-cell anchor: row 1 has a single non-zero on the diagonal
+    # (1/sqrt(dz[1])) so the top cell can't drift when β² = 0.
+    @test R1[1, 1] ≈ 1.0 / sqrt(dz[1])
+    @test count(!iszero, R1[1, :]) == 1
+
+    # For i ≥ 2, row i is the scaled first-difference with weight 1/√dz[i-1].
+    for i in 2:nz
+        @test R1[i, i-1] ≈ -1.0 / sqrt(dz[i-1])
+        @test R1[i, i]   ≈  1.0 / sqrt(dz[i-1])
+    end
+
+    # Deep rows have smaller magnitude than shallow rows (dz grows with
+    # depth on a log-growing grid), so the deep smoothness is looser.
+    @test abs(R1[2, 2]) > abs(R1[nz, nz])
+end
+
+# ────────────────────────────────────────────────────────────────────────────
 @testset "deterministic_invert converges to χ² target" begin
     n = length(zbnd)
     wref   = fill(0.02, n)
@@ -122,11 +151,13 @@ end
     @test peak_in_aquifer > 0.10
     @test peak_in_aquifer < 0.35
 
-    # Away from the aquifer (below 60 m), we should stay closer to background
-    # than to the aquifer amplitude. Occam's smoothness prior lets the aquifer
-    # trail into deeper cells, so allow up to ~half the aquifer peak.
+    # Away from the aquifer (below 60 m), we should stay well below the
+    # aquifer amplitude. The depth-scaled R matrix penalises deep
+    # differences less than shallow (deep dz is larger), so the aquifer
+    # tail spreads noticeably into the deep — allow up to ~2/3 of the
+    # aquifer peak before flagging as runaway.
     deep_mask = zbnd .> 60.0
-    @test maximum(wfinal[deep_mask]) < 0.12
+    @test maximum(wfinal[deep_mask]) < 0.20
 end
 
 # ────────────────────────────────────────────────────────────────────────────
