@@ -1,3 +1,5 @@
 *.bin
 *.png
 *.log
+# Julia package: the Manifest pins a dev environment and is not committed.
+Manifest.toml

@@ -153,8 +153,8 @@ function transD_GP.makereg(r::Symbol, F::SMRDetOperator)
 end
 
 """
-    deterministic_invert(S::SMRSoundingKnown; wstart, wref, kwargs...)
-        -> (op, mnew, χ², λ², oidx)
+    deterministic_invert(S::SMRSoundingKnown; wstart, wref, uncertainty = :none, kwargs...)
+        -> NamedTuple (op, mnew, χ², λ², oidx, uncertainty)
 
 Run Occam-style Gauss-Newton inversion on an amplitude-only SMR sounding.
 
@@ -187,16 +187,44 @@ Arguments:
 - `nstepsmax` : maximum outer iterations. Default `15`.
 - `ntries` : line-search resolution on `λ²`. Default `6`.
 - `target` : χ² target. Default `length(S.V0)` (χ²/N = 1).
+- `uncertainty` : one of
+    - `:none` (default) — skip uncertainty estimation, return `nothing`
+      in the `uncertainty` field.
+    - `:laplace` or `:linearised` — compute the Hessian-inverse Gaussian
+      approximation via `linearised_posterior_covariance` at the final
+      `λ²`. Cheap (one Cholesky). Assumes Gaussian noise, near-linear
+      forward around the minimum, and single-mode posterior.
+    - `:bootstrap` — parametric bootstrap via `bootstrap_invert`. Resamples
+      Gaussian noise from `S.σ_V0` and re-runs Occam per replicate;
+      returns per-cell quantiles. Slower (N re-inversions) but captures
+      non-linearity and per-replicate `λ²` sensitivity.
+- `N_bootstrap` : number of bootstrap replicates when `uncertainty = :bootstrap`.
+                  Default 200.
+- `bootstrap_method` : `:parametric` (default, Gaussian noise from σ_V0)
+                       or `:residual` (non-parametric residual resampling).
+- `bootstrap_rseed`  : base RNG seed for reproducibility. Default `nothing`
+                       (uses global RNG).
 - Any remaining keyword arguments are forwarded to `gradientinv`.
 
-Returns `(op, mnew, χ², λ², oidx)`:
-- `op` is the `SMRDetOperator` — holds the final Jacobian, residual and
-  weights. Feed to `linearised_posterior_covariance` for a Gaussian
-  uncertainty band around the recovered model.
-- The remaining fields are `gradientinv`'s per-iteration histories. The
-  final model is `mnew[end][oidx[end]]`.
+Returns a NamedTuple with fields:
+- `op`  : the `SMRDetOperator` — holds the final Jacobian, residual and weights.
+- `mnew`, `χ²`, `λ²`, `oidx` : `gradientinv`'s per-iteration histories.
+  The final model is `mnew[end][oidx[end]]`.
+- `uncertainty` : `nothing`, or the result NamedTuple from
+  `linearised_posterior_covariance` (`.Cm`, `.σ`, `.λ²`) or from
+  `bootstrap_invert` (`.w_reps`, `.q05`, `.q50`, `.q95`, `.λ²_reps`, …).
 
-See also: `linearised_posterior_covariance`.
+Positional unpacking of the first five fields still works for backward
+compatibility:
+
+    op, mnew, χ², λ², oidx = deterministic_invert(S; ...)
+
+To also grab the uncertainty:
+
+    r = deterministic_invert(S; uncertainty = :bootstrap, N_bootstrap = 100)
+    σ_at_depth_i = r.uncertainty.q95[i] - r.uncertainty.q05[i]     # a p5-p95 spread
+
+See also: `linearised_posterior_covariance`, `bootstrap_invert`.
 """
 function deterministic_invert(S::SMRSoundingKnown;
         wstart = fill(0.05, length(S.Fm.zgrid)),
@@ -210,14 +238,61 @@ function deterministic_invert(S::SMRSoundingKnown;
         nstepsmax = 15,
         ntries    = 6,
         target    = nothing,
+        uncertainty::Symbol = :none,
+        N_bootstrap::Int = 200,
+        bootstrap_method::Symbol = :parametric,
+        bootstrap_rseed::Union{Nothing, Int} = nothing,
         kwargs...)
     op = SMRDetOperator(S)
     length(wstart) == size(op.K̃, 2) || throw(ArgumentError("wstart length must equal length(S.Fm.zgrid)"))
     length(wref)   == length(wstart) || throw(ArgumentError("wref length must equal wstart length"))
-    result = transD_GP.gradientinv(
+    mnew, χ², λ², oidx = transD_GP.gradientinv(
         collect(Float64, wstart), collect(Float64, wref), op;
         regtype, λ²min, λ²max, β², knownvalue, nstepsmax, ntries, target, lo, hi, kwargs...)
-    return (op, result...)
+
+    # Optional uncertainty estimation — dispatched on the `uncertainty` kwarg
+    unc = _compute_uncertainty(uncertainty, S, op, mnew, λ², oidx;
+        wstart = wstart, wref = wref, regtype = regtype,
+        lo = lo, hi = hi, β² = β², λ²min = λ²min, λ²max = λ²max,
+        knownvalue = knownvalue, nstepsmax = nstepsmax, ntries = ntries,
+        target = target,
+        N_bootstrap = N_bootstrap,
+        bootstrap_method = bootstrap_method,
+        bootstrap_rseed = bootstrap_rseed,
+        kwargs...)
+
+    return (op = op, mnew = mnew, χ² = χ², λ² = λ², oidx = oidx, uncertainty = unc)
+end
+
+# Dispatch helper — kept out of `deterministic_invert`'s body so the main
+# function reads clearly and so future methods (e.g. jackknife, MCMC) can be
+# slotted in by adding a branch here without disturbing the caller signature.
+function _compute_uncertainty(kind::Symbol, S, op, mnew, λ², oidx;
+        wstart, wref, regtype, lo, hi, β², λ²min, λ²max,
+        knownvalue, nstepsmax, ntries, target,
+        N_bootstrap, bootstrap_method, bootstrap_rseed, kwargs...)
+    kind === :none && return nothing
+    if kind === :laplace || kind === :linearised
+        λ²_final = λ²[end][oidx[end]][1]
+        return linearised_posterior_covariance(op, λ²_final; regtype = regtype)
+    elseif kind === :bootstrap
+        w0 = mnew[end][oidx[end]]
+        # Forward the SAME regularisation setup to every bootstrap replicate.
+        # Bootstrap characterises noise sensitivity around a fixed prior, not
+        # sensitivity to the prior itself.
+        return bootstrap_invert(S;
+            N = N_bootstrap, w0 = w0,
+            method = bootstrap_method,
+            rseed = bootstrap_rseed,
+            wstart = wstart, wref = wref, regtype = regtype,
+            lo = lo, hi = hi, β² = β²,
+            λ²min = λ²min, λ²max = λ²max,
+            knownvalue = knownvalue, nstepsmax = nstepsmax, ntries = ntries,
+            target = target,
+            kwargs...)
+    else
+        throw(ArgumentError("uncertainty must be :none, :laplace (aka :linearised), or :bootstrap — got $kind"))
+    end
 end
 
 """
