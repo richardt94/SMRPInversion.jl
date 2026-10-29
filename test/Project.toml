@@ -1,0 +1,8 @@
+[deps]
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+SMRPInversion = "aec56ffe-cd48-4f37-83c0-3fddfef137dd"
+SNMRForward = "7a571783-2426-4210-b64c-8cc94fde9200"
+HiQGA = "01574e87-63b6-4466-925a-334cf7e21b6b"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"

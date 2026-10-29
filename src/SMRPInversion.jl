@@ -413,5 +413,17 @@ function loopacrosssoundings(
     end
 end
 
+# ── Deterministic (Occam-style Gauss-Newton) inversion ──────────────────────
+# Amplitude-only Occam wrapper around HiQGA.transD_GP.gradientinv.
+# Defined here so SMRSoundingKnown (from earlier in this file) is in scope.
+include("DeterministicInversion.jl")
+
+# ── Hierarchical heteroscedastic noise for trans-D MCMC (Paper 1 centrepiece)
+include("HierarchicalNoise.jl")
+
+# ── Bootstrap uncertainty for the Occam inversion above ─────────────────────
+# Parametric or non-parametric bootstrap; produces an ensemble of Occam
+# solutions comparable to linearised_posterior_covariance and MCMC posteriors.
+include("BootstrapInversion.jl")
 
 end
